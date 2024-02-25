@@ -92,7 +92,7 @@ Simple!
 
 ## Caveats
 
-OK, there's always a few.  But we promise, there's not that many.  Firstly:
+OK, there's always a few.  But we promise, there's not that many:
 
 1. The extension of your templates must be `.html` and `.htm` and your tags must have the same extension as the file they're included in.  This is probably already the case if you're using Hiraeth cause you're not a heathen.  Other formats may be supported down the line, but currently it explicitly looks for `.html` or `.htm` and the tag component extensions must match the template extension.
 2. Lastly, due to HTML not really supporting XML namespaces, you cannot have tag components directly in `resources/tags`.  They **MUST** be in a sub-directory.  When the tag `<t:layout:grid>` is used, the first part of the tag name is stripped, the rest is translated to the path to the component.  In that respect `<tag:layout:grid>` would work just as well... but if you only have two levels, the first part will be dropped and the post-processor will not recognize it as a tag component.
