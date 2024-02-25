@@ -1,0 +1,22 @@
+[templates]
+
+	;
+	; Paths is a list of aliases to paths (relative to the application root) where templates can be
+	; found.  An alias begins with an `@` symbol, so `@pages/index.html` would resolve to
+	; `<app_root>/resources/pages/index.html` if the "pages" path was configured to
+	; "resources/pages" (which is default).
+	;
+
+	paths = {
+		"tags": "resources/tags",
+	}
+
+[twig]
+
+	;
+	; Extensions - A list of extension classes
+	;
+
+	extensions = [
+		"Hiraeth\Twig\Tags\Extension"
+	]

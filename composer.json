@@ -1,0 +1,42 @@
+{
+	"name": "hiraeth/twig-tags",
+	"description": "Provides Tag Components for Hiraeth Twig",
+	"keywords": [],
+	"license": "MIT",
+	"minimum-stability": "dev",
+	"prefer-stable": true,
+	"authors": [
+		{
+			"name": "Matthew J. Sahagian",
+			"email": "matthew.sahagian@gmail.com",
+			"role": "Contributor"
+		}
+	],
+	"require-dev": {
+		"phpstan/phpstan": "^1.10",
+		"phpunit/phpunit": "^8.5"
+	},
+	"require": {
+		"php": ">=8.2",
+        "hiraeth/app": "^3.0",
+        "hiraeth/twig": "^3.0",
+        "ivopetkov/html5-dom-document-php": "^2.0"
+    },
+	"autoload": {
+		"classmap": ["src/"]
+	},
+    "type": "opus-package",
+    "extra": {
+        "opus": {
+            "hiraeth/app": {
+                "config": "",
+                "resources": ""
+            }
+        }
+    },
+    "config": {
+		"allow-plugins": {
+			"imarc/opus": true
+		}
+	}
+}
