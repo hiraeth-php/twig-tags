@@ -134,7 +134,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				] + $data
 			);
 
-+			$this->doc->loadHTML(
+			$this->doc->loadHTML(
 				$template->render(),
 				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
 			);
