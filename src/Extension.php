@@ -1,15 +1,18 @@
 <?php
 namespace Hiraeth\Twig\Tags;
 
+use ArrayIterator;
+use RuntimeException;
 use Hiraeth\Twig\Manager;
 use Hiraeth\Twig\Renderer;
 use Twig\Extension\GlobalsInterface;
 use Twig\Extension\AbstractExtension;
 use IvoPetkov\HTML5DOMDocument;
-use RuntimeException;
-use ArrayIterator;
+use DOMDocumentFragment;
+use DOMDocument;
 use DOMElement;
 use DOMNode;
+use DOMText;
 
 class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 {
@@ -36,7 +39,9 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$this->parser = $parser;
 		$this->doc    = $doc;
 
+		$this->doc->registerNodeClass(DOMText::class, Text::class);
 		$this->doc->registerNodeClass(DOMElement::class, Tag::class);
+		$this->doc->registerNodeClass(DOMDocumentFragment::class, Fragment::class);
 	}
 
 	/**
@@ -82,19 +87,30 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	 */
 	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension)
 	{
-		$children = array();
+		$children  = array();
 
-		foreach ($node->childNodes as $child) {
+		for ($x = 0; $x < count($node->childNodes); $x++) {
+			$child  = $node->childNodes->item($x);
+			$result = $child;
 
-			$result = $this->renderNode($child, $doc, $extension);
-
-			if ($child instanceof DOMElement) {
-				$children[] = $result;
+			if ($child instanceof Text) {
+				if ($child->clean()) {
+					$node->removeChild($child); $x--;
+					continue;
+				}
 			}
 
-			if ($result !== $child) {
-				$node->replaceChild($doc->importNode($result, true), $child);
+
+			if ($child instanceof Tag) {
+				$result = $this->renderNode($child, $doc, $extension);
+
+				if ($result !== $child) {
+					$node->replaceChild($doc->importNode($result, true), $child);
+					$x = $x - 1 + count($result->childNodes);
+				}
 			}
+
+			$children[] = $result;
 		}
 
 		if (strpos($node->nodeName, ':')) {
@@ -134,14 +150,15 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				] + $data
 			);
 
-			$this->doc->loadHTML(
+			$sub_doc = clone $this->doc;
+			$sub_doc->loadHTML(
 				$template->render(),
 				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
 			);
 
-			$fragment = $this->doc->createDocumentFragment();
+			$fragment = $sub_doc->createDocumentFragment();
 
-			$fragment->append(...$this->doc->childNodes);
+			$fragment->append(...$sub_doc->childNodes);
 
 			return $fragment;
 		}
