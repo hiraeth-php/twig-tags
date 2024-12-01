@@ -113,7 +113,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			$children[] = $result;
 		}
 
-		if (strpos($node->nodeName, ':')) {
+		if (strpos($node->nodeName, ':') !== FALSE) {
 			$data = array();
 			$path = sprintf('@tags/%s.%s', str_replace(':', '/', $node->nodeName), $extension);
 
