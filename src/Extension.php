@@ -126,9 +126,9 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			}
 
 			foreach ($node->attributes as $attr) {
-				if (str_starts_with($attr->name, '.')) {
+				if (str_ends_with($attr->name, ':')) {
 					$type = 'prop';
-					$name = substr($attr->name, 1);
+					$name = substr($attr->name, 0, -1);
 				} else {
 					$type = 'data';
 					$name = $attr->name;
