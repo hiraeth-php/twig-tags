@@ -2,7 +2,7 @@
 
 namespace Hiraeth\Twig\Tags;
 
-class Fragment extends \DOMDocumentFragment
+class Fragment extends \DOMDocumentFragment implements \Stringable
 {
 	public function __toString(): string
 	{

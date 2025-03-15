@@ -1,3 +1,9 @@
 <?php
 
-passthru(sprintf('%s vendor/bin/phpunit --bootstrap vendor/autoload.php test/cases', $_SERVER['_']));
+if (file_exists(__DIR__ . '/../vendor/bin/phpunit')) {
+    $UNIT_BIN = realpath(__DIR__ . '/../vendor/bin/phpunit');
+} else {
+    $UNIT_BIN = '$(which phpunit)';
+}
+
+passthru(sprintf('%s %s --bootstrap vendor/autoload.php test/cases', PHP_BINARY, $UNIT_BIN));

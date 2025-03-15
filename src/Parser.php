@@ -19,7 +19,7 @@ class Parser extends AbstractTokenParser
 	/**
 	 *
 	 */
-	protected $tokens = array();
+	protected $tokens = [];
 
 	/**
 	 *
@@ -53,7 +53,13 @@ class Parser extends AbstractTokenParser
 	 */
 	public function getValue($name)
 	{
-		return $this->tokens[$name];
+		$value = $this->tokens[$name];
+
+		if (is_array($value)) {
+			return implode(' ', $value);
+		}
+
+		return (string) $value;
 	}
 
 

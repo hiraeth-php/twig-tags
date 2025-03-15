@@ -87,7 +87,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	 */
 	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension)
 	{
-		$children  = array();
+		$children  = [];
 
 		for ($x = 0; $x < count($node->childNodes); $x++) {
 			$child  = $node->childNodes->item($x);
@@ -113,9 +113,10 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			$children[] = $result;
 		}
 
-		if (strpos($node->nodeName, ':') !== FALSE) {
-			$data = array();
-			$path = sprintf('@tags/%s.%s', str_replace(':', '/', $node->nodeName), $extension);
+		if (str_contains($node->nodeName, ':')) {
+			$prop = [];
+			$data = [];
+			$path = sprintf('@tags/%s.%s', preg_replace('/:+/', '/', $node->nodeName), $extension);
 
 			if (!$this->manager->has($path)) {
 				throw new RuntimeException(sprintf(
@@ -125,10 +126,18 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			}
 
 			foreach ($node->attributes as $attr) {
-				if (strpos($attr->value, $this->parser::PREFIX) === 0) {
-					$data[$attr->name] = $this->parser->getValue($attr->value);
+				if (str_starts_with($attr->name, '.')) {
+					$type = 'prop';
+					$name = substr($attr->name, 1);
 				} else {
-					$data[$attr->name] = $attr->value;
+					$type = 'data';
+					$name = $attr->name;
+				}
+
+				if (str_starts_with($attr->value, (string) $this->parser::PREFIX)) {
+					$$type[$name] = $this->parser->getValue($attr->value);
+				} else {
+					$$type[$name] = $attr->value;
 				}
 			}
 
@@ -141,7 +150,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 							$content = '';
 
 							foreach ($this as $item) {
-								$content = $content . $item;
+								$content .= $item;
 							}
 
 							return $content;
@@ -153,8 +162,26 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			$sub_doc = clone $this->doc;
 			$sub_doc->loadHTML(
 				$template->render(),
-				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_COMPACT | LIBXML_NONET
 			);
+
+			foreach ($sub_doc->childNodes as $sub_node) {
+				foreach ($prop as $attr_name => $attr_value) {
+					if ($sub_node->hasAttributes()) {
+						foreach ($sub_node->attributes as $target_attr) {
+							if ($target_attr->name == $attr_name) {
+								$target_attr->value = $target_attr->value . ' ' . $attr_value;
+								break 2;
+							}
+						}
+					}
+
+					$new_attr        = $sub_doc->createAttribute($attr_name);
+					$new_attr->value = $attr_value;
+
+					$sub_node->appendChild($new_attr);
+				}
+			}
 
 			$fragment = $sub_doc->createDocumentFragment();
 

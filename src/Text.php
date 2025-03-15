@@ -2,7 +2,7 @@
 
 namespace Hiraeth\Twig\Tags;
 
-class Text extends \DOMText
+class Text extends \DOMText implements \Stringable
 {
 	static protected $inlineElements = [
 		'a','abbr','acronym','b','bdo','big','br','button','cite','code','dfn','em','i','img',
@@ -32,12 +32,12 @@ class Text extends \DOMText
 			}
 
 			if (!$next || !in_array($next->nodeName, static::$inlineElements)) {
-				$this->textContent = rtrim($this->textContent);
+				$this->textContent = rtrim((string) $this->textContent);
 			} else {
-				$this->textContent = preg_replace('/\s+$/', ' ', $this->textContent);
+				$this->textContent = preg_replace('/\s+$/', ' ', (string) $this->textContent);
 			}
 
-			$this->textContent = preg_replace('/\s+/', ' ', $this->textContent);
+			$this->textContent = preg_replace('/\s+/', ' ', (string) $this->textContent);
 
 			return FALSE;
 		}
