@@ -53,13 +53,7 @@ class Parser extends AbstractTokenParser
 	 */
 	public function getValue($name)
 	{
-		$value = $this->tokens[$name];
-
-		if (is_array($value)) {
-			return implode(' ', $value);
-		}
-
-		return (string) $value;
+		return $this->tokens[$name] ?? NULL;
 	}
 
 
