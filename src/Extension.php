@@ -171,7 +171,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 						foreach ($sub_node->attributes as $target_attr) {
 							if ($target_attr->name == $attr_name) {
 								$target_attr->value = $target_attr->value . ' ' . $attr_value;
-								break 2;
+								continue 2;
 							}
 						}
 					}
