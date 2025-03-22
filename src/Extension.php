@@ -64,22 +64,20 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	 */
 	public function render (string $content, string $extension): string
 	{
-		if (!in_array($extension, ['html', 'html', 'xml'])) {
+		if (!in_array($extension, ['html', 'html'])) {
 			return $content;
 		}
 
-		if (in_array($extension, ['html', 'htm'])) {
-			$doc = clone $this->doc;
+		$doc = clone $this->doc;
 
-			$doc->loadHTML(
-				sprintf('%s', $content),
-				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-			);
+		$doc->loadHTML(
+			sprintf('%s', $content),
+			LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+		);
 
-			$this->renderNode($doc, $doc, $extension);
+		$this->renderNode($doc, $doc, $extension);
 
-			return $doc->saveHTML($doc);
-		}
+		return $doc->saveHTML($doc);
 	}
 
 	/**
