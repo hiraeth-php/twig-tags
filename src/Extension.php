@@ -137,7 +137,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				if (str_starts_with($attr->value, (string) $this->parser::PREFIX)) {
 					$$type[$name] = $this->parser->getValue($attr->value);
 				} else {
-					$$type[$name] = $attr->value;
+					$$type[$name] = $attr->value ?: true;
 				}
 			}
 
