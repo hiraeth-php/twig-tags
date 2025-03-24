@@ -165,6 +165,14 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 			foreach ($sub_doc->childNodes as $sub_node) {
 				foreach ($prop as $attr_name => $attr_value) {
+					if (!is_string($attr_value)) {
+						if (is_array($attr_value) || is_bool($attr_value)) {
+							$attr_value = json_encode($attr_value);
+						} else {
+							$attr_value = (string) $attr_value;
+						}
+					}
+
 					if ($sub_node->hasAttributes()) {
 						foreach ($sub_node->attributes as $target_attr) {
 							if ($target_attr->name == $attr_name) {
