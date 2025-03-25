@@ -13,9 +13,16 @@ use DOMDocument;
 use DOMElement;
 use DOMNode;
 use DOMText;
+use IvoPetkov\HTML5DOMElement;
 
 class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 {
+	/**
+	 *
+	 */
+	protected $context = [];
+
+
 	/**
 	 * @var HTML5DOMDocument
 	 */
@@ -80,12 +87,12 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		return $doc->saveHTML($doc);
 	}
 
+
 	/**
 	 *
 	 */
-	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension)
-	{
-		$children  = [];
+	public function renderChildren(DOMNode $node, HTML5DOMDocument $doc, string $extension): array {
+		$children = [];
 
 		for ($x = 0; $x < count($node->childNodes); $x++) {
 			$child  = $node->childNodes->item($x);
@@ -111,9 +118,19 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			$children[] = $result;
 		}
 
+		return $children;
+	}
+
+
+	/**
+	 *
+	 */
+	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension)
+	{
 		if (str_contains($node->nodeName, ':')) {
 			$prop = [];
 			$data = [];
+
 			$path = sprintf('@tags/%s.%s', preg_replace('/:+/', '/', $node->nodeName), $extension);
 
 			if (!$this->manager->has($path)) {
@@ -135,13 +152,18 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				if (str_starts_with($attr->value, (string) $this->parser::PREFIX)) {
 					$$type[$name] = $this->parser->getValue($attr->value);
 				} else {
-					$$type[$name] = $attr->value ?: true;
+					$$type[$name] = $attr->value ?: 1;
 				}
 			}
 
+			$this->context += $data;
+
+			$sub_doc  = clone $this->doc;
+			$children = $this->renderChildren($node, $doc, $extension);
 			$template = $this->manager->load(
 				$path,
 				[
+					'ctx'      => $this->context,
 					'children' => new class($children) extends ArrayIterator {
 						public function __toString(): string
 						{
@@ -157,7 +179,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				] + $data
 			);
 
-			$sub_doc = clone $this->doc;
 			$sub_doc->loadHTML(
 				$template->render(),
 				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_COMPACT | LIBXML_NONET
@@ -194,9 +215,12 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			$fragment->append(...$sub_doc->childNodes);
 
 			return $fragment;
-		}
 
-		return $node;
+		} else {
+			$this->renderChildren($node, $doc, $extension);
+
+			return $node;
+		}
 	}
 
 
