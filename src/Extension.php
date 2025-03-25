@@ -204,13 +204,13 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	public function renderChildren(Tag $node, DOMDocument $doc, string $extension, array $data = []): array {
 		$children = [];
 
-		for ($x = 0; $x < count($node->childNodes); $x++) {
-			$result = $child = $node->childNodes[$x];
+		for ($index = 0; $index < count($node->childNodes); $index++) {
+			$result = $child = $node->childNodes[$index];
 
 			if ($child instanceof Text) {
 				if ($child->trim()) {
 					$child->remove();
-					$x--;
+					$index--;
 
 					continue;
 				}
@@ -222,10 +222,10 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				if ($result->nodeName == 'html') {
 					$result   = iterator_to_array($result->childNodes);
 					$children = array_merge($children, $result);
+					$index    = $index - 1 + count($result);
 
 					$child->replaceWith(...$result);
 
-					$x        = $x - 1 + count($result);
 
 					continue;
 				}
