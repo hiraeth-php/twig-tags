@@ -93,7 +93,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	/**
 	 *
 	 */
-	public function renderChildren(DOMNode $node, HTML5DOMDocument $doc, string $extension): array {
+	public function renderChildren(DOMNode $node, HTML5DOMDocument $doc, string $extension, array $data = []): array {
 		$children = [];
 
 		for ($x = 0; $x < count($node->childNodes); $x++) {
@@ -109,7 +109,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 
 			if ($child instanceof Tag) {
-				$result = $this->renderNode($child, $doc, $extension);
+				$result = $this->renderNode($child, $doc, $extension, $data);
 
 				if ($result !== $child) {
 					$node->replaceChild($doc->importNode($result, true), $child);
@@ -127,12 +127,12 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	/**
 	 *
 	 */
-	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension)
+	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension, array $data = [])
 	{
 		if (str_contains($node->nodeName, ':')) {
-			$prop = [];
-			$data = [];
-			$path = sprintf('@tags/%s.%s', preg_replace('/:+/', '/', $node->nodeName), $extension);
+			$prop    = [];
+			$path    = sprintf('@tags/%s.%s', preg_replace('/:+/', '/', $node->nodeName), $extension);
+			$sub_doc = clone $this->doc;
 
 			if ($node->nodeName != ':' && !$this->manager->has($path)) {
 				throw new RuntimeException(sprintf(
@@ -157,16 +157,16 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				}
 			}
 
-			$this->context += $data;
-
-			$sub_doc  = clone $this->doc;
-			$children = $this->renderChildren($node, $doc, $extension);
+			$this->context = $data + $this->context;
 
 			if ($node->nodeName == ':') {
+				$children = $this->renderChildren($node, $doc, $extension, $data);
+
 				$sub_doc->loadHTML('<html></html>', static::NODE_FLAGS);
 				$sub_doc->append(...$sub_doc->importNode($node, TRUE)->childNodes);
 
 			} else {
+				$children = $this->renderChildren($node, $doc, $extension);
 				$template = $this->manager->load(
 					$path,
 					[
