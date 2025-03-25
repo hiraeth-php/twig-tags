@@ -17,6 +17,8 @@ use IvoPetkov\HTML5DOMElement;
 
 class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 {
+	const NODE_FLAGS = LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_COMPACT | LIBXML_NONET;
+
 	/**
 	 *
 	 */
@@ -130,10 +132,9 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		if (str_contains($node->nodeName, ':')) {
 			$prop = [];
 			$data = [];
-
 			$path = sprintf('@tags/%s.%s', preg_replace('/:+/', '/', $node->nodeName), $extension);
 
-			if (!$this->manager->has($path)) {
+			if ($node->nodeName != ':' && !$this->manager->has($path)) {
 				throw new RuntimeException(sprintf(
 					'Could not find matching tag for "%s"',
 					$node->nodeName
@@ -160,29 +161,33 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 			$sub_doc  = clone $this->doc;
 			$children = $this->renderChildren($node, $doc, $extension);
-			$template = $this->manager->load(
-				$path,
-				[
-					'ctx'      => $this->context,
-					'children' => new class($children) extends ArrayIterator {
-						public function __toString(): string
-						{
-							$content = '';
 
-							foreach ($this as $item) {
-								$content .= $item;
+			if ($node->nodeName == ':') {
+				$sub_doc->loadHTML('<html></html>', static::NODE_FLAGS);
+				$sub_doc->append(...$sub_doc->importNode($node, TRUE)->childNodes);
+
+			} else {
+				$template = $this->manager->load(
+					$path,
+					[
+						'ctx'      => $this->context,
+						'children' => new class($children) extends ArrayIterator {
+							public function __toString(): string
+							{
+								$content = '';
+
+								foreach ($this as $item) {
+									$content .= $item;
+								}
+
+								return $content;
 							}
-
-							return $content;
 						}
-					}
-				] + $data
-			);
+					] + $data
+				);
 
-			$sub_doc->loadHTML(
-				$template->render(),
-				LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_COMPACT | LIBXML_NONET
-			);
+				$sub_doc->loadHTML($template->render(), static::NODE_FLAGS);
+			}
 
 			foreach ($sub_doc->childNodes as $sub_node) {
 				foreach ($prop as $attr_name => $attr_value) {
@@ -211,7 +216,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 			}
 
 			$fragment = $sub_doc->createDocumentFragment();
-
 			$fragment->append(...$sub_doc->childNodes);
 
 			return $fragment;
