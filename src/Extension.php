@@ -2,33 +2,42 @@
 namespace Hiraeth\Twig\Tags;
 
 use ArrayIterator;
+use DOMDocument;
+use DOMDocumentFragment;
+use DOMElement;
+use DOMText;
+use Hiraeth\Application;
 use RuntimeException;
 use Hiraeth\Twig\Manager;
 use Hiraeth\Twig\Renderer;
 use Twig\Extension\GlobalsInterface;
 use Twig\Extension\AbstractExtension;
-use IvoPetkov\HTML5DOMDocument;
-use DOMDocumentFragment;
-use DOMDocument;
-use DOMElement;
-use DOMNode;
-use DOMText;
-use IvoPetkov\HTML5DOMElement;
+use Twig\TwigFunction;
+use Masterminds\HTML5;
+use Stringable;
 
 class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 {
-	const NODE_FLAGS = LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD | LIBXML_COMPACT | LIBXML_NONET;
+	/**
+	 * @var Application
+	 */
+	protected $app;
 
 	/**
-	 *
+	 * @var array<string, mixed>
 	 */
 	protected $context = [];
 
+	/**
+	 * @var int
+	 */
+	protected $depth = 0;
 
 	/**
-	 * @var HTML5DOMDocument
+	 * @var HTML5
 	 */
-	protected $doc;
+	protected $dom;
+
 
 	/**
 	 * @var Manager
@@ -36,22 +45,32 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	protected $manager;
 
 	/**
+	 * @var string
+	 */
+	protected $nodeName;
+
+	/**
 	 * @var TagsParser
 	 */
 	protected $parser;
 
 	/**
+	 * @var array<Tag>
+	 */
+	protected $scripts = [];
+
+	/**
 	 *
 	 */
-	public function __construct(Parser $parser, HTML5DOMDocument $doc)
+	public function __construct(Application $app, Parser $parser)
 	{
+		$this->app    = $app;
 		$this->parser = $parser;
-		$this->doc    = $doc;
-
-		$this->doc->registerNodeClass(DOMText::class, Text::class);
-		$this->doc->registerNodeClass(DOMElement::class, Tag::class);
-		$this->doc->registerNodeClass(DOMDocumentFragment::class, Fragment::class);
+		$this->dom    = new HTML5([
+			'xmlNamespaces' => TRUE
+		]);
 	}
+
 
 	/**
 	 *
@@ -63,6 +82,60 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		];
 	}
 
+
+	/**
+	 *
+	 */
+	public function getFunctions(): array
+	{
+		return [
+			new TwigFunction(
+				'require',
+				function(array $context, array $attributes, array $priors = []) {
+					if ($attributes) {
+						$missing = array_diff($attributes, array_keys($context));
+
+						if (count($missing)) {
+							throw new RuntimeException(sprintf(
+								'Could not initialize %s component without attributes: "%s"',
+								$this->nodeName,
+								implode(', ', $missing)
+							));
+						}
+					}
+
+					if ($priors) {
+						$missing = array_diff($priors, array_keys($context['ctx']));
+
+						if (count($missing)) {
+							throw new RuntimeException(sprintf(
+								'Could not initialize %s component without context: "%s"',
+								$this->nodeName,
+								implode(', ', $missing)
+							));
+						}
+					}
+				},
+				[
+				 	'needs_context' => TRUE
+				]
+			),
+			new TwigFunction(
+				'resolve',
+				function(array &$context, array $values) {
+					$context = array_merge($context, $values);
+				},
+				[
+				 	'needs_context' => TRUE
+				]
+			)
+		];
+	}
+
+
+	/**
+	 *
+	 */
 	public function getTokenParsers()
 	{
 		return [$this->parser];
@@ -71,50 +144,92 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	/**
 	 *
 	 */
-	public function render (string $content, string $extension): string
+	public function render(string $content, string $extension): string
 	{
+
 		if (!in_array($extension, ['html', 'html'])) {
 			return $content;
 		}
 
-		$doc = clone $this->doc;
+		if (!$this->depth) {
+			$this->context = [];
+			$this->scripts = [];
+		}
 
-		$doc->loadHTML(
-			sprintf('%s', $content),
-			LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
-		);
+		$doc = $this->dom->loadHTML($content);
 
-		$this->renderNode($doc, $doc, $extension);
+		$doc->registerNodeClass(DOMDocumentFragment::class, Fragment::class);
+		$doc->registerNodeClass(DOMElement::class, Tag::class);
+		$doc->registerNodeClass(DOMText::class, Text::class);
 
-		return $doc->saveHTML($doc);
+		$this->renderNode($doc->documentElement, $doc, $extension);
+
+		if (!$this->depth) {
+			if (count($this->scripts)) {
+				ksort($this->scripts);
+
+				$content = sprintf('%s', join("\n", array_map(
+					fn($script) => $script->textContent,
+					$this->scripts
+				)));
+
+				$hash = md5($content);
+				$file = sprintf('storage/public/hscripts/%s.js', $hash);
+
+				if (!$this->app->hasFile($file)) {
+					$handle = $this->app->getFile($file, TRUE)->openFile('w+');
+
+					$handle->fwrite($content);
+					$handle->fflush();
+				}
+
+				$scripts = $doc->createElement('script');
+				$source  = $doc->createAttribute('src');
+
+				$source->value = sprintf('/storage/hscripts/%s.js', $hash);
+
+				$scripts->appendChild($source);
+
+				$doc->getElementsByTagName('html')[0]->prepend($scripts);
+			}
+		}
+
+		return $this->dom->saveHTML($doc);
 	}
 
 
 	/**
 	 *
 	 */
-	public function renderChildren(DOMNode $node, HTML5DOMDocument $doc, string $extension, array $data = []): array {
+	public function renderChildren(Tag $node, DOMDocument $doc, string $extension, array $data = []): array {
 		$children = [];
 
 		for ($x = 0; $x < count($node->childNodes); $x++) {
-			$child  = $node->childNodes->item($x);
-			$result = $child;
+			$result = $child = $node->childNodes[$x];
 
 			if ($child instanceof Text) {
-				if ($child->clean()) {
-					$node->removeChild($child); $x--;
+				if ($child->trim()) {
+					$child->remove();
+					$x--;
+
 					continue;
 				}
 			}
 
-
 			if ($child instanceof Tag) {
 				$result = $this->renderNode($child, $doc, $extension, $data);
 
-				if ($result !== $child) {
-					$node->replaceChild($doc->importNode($result, true), $child);
-					$x = $x - 1 + count($result->childNodes);
+				if ($result->nodeName == 'html') {
+					$result   = iterator_to_array($result->childNodes);
+					$children = array_merge($children, $result);
+
+					$child->replaceWith(...$result);
+
+					$x        = $x - 1 + count($result);
+
+					continue;
 				}
+
 			}
 
 			$children[] = $result;
@@ -127,23 +242,20 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	/**
 	 *
 	 */
-	public function renderNode(DOMNode $node, HTML5DOMDocument $doc, string $extension, array $data = [])
+	public function renderNode(Tag $node, DOMDocument $doc, string $extension, array $data = [])
 	{
-		if (str_contains($node->nodeName, ':')) {
-			$prop    = [];
-			$path    = sprintf('@tags/%s.%s', preg_replace('/:+/', '/', $node->nodeName), $extension);
-			$sub_doc = clone $this->doc;
+		$this->nodeName = $node->nodeName;
 
-			if ($node->nodeName != ':' && !$this->manager->has($path)) {
-				throw new RuntimeException(sprintf(
-					'Could not find matching tag for "%s"',
-					$node->nodeName
-				));
-			}
+		if (str_contains($node->nodeName, ':')) {
+			$context       = [];
+			$attributes    = [];
+			$sub_document  = $doc->createElement('html');
+			$path_tag      = preg_replace('/^[a-z]+[:]+|[:]+/', '/', $node->nodeName);
+			$path          = '@tags' . $path_tag . '.' . $extension;
 
 			foreach ($node->attributes as $attr) {
 				if (str_ends_with($attr->name, ':')) {
-					$type = 'prop';
+					$type = 'attributes';
 					$name = substr($attr->name, 0, -1);
 				} else {
 					$type = 'data';
@@ -157,68 +269,82 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				}
 			}
 
-			$this->context = $data + $this->context;
+			$this->context = $context = $data + $this->context;
 
-			if ($node->nodeName == ':') {
+			if ($path_tag == '/') {
 				$children = $this->renderChildren($node, $doc, $extension, $data);
 
-				$sub_doc->loadHTML('<html></html>', static::NODE_FLAGS);
-				$sub_doc->append(...$sub_doc->importNode($node, TRUE)->childNodes);
+				$sub_document->append(...$children);
 
 			} else {
 				$children = $this->renderChildren($node, $doc, $extension);
-				$template = $this->manager->load(
-					$path,
-					[
-						'ctx'      => $this->context,
-						'children' => new class($children) extends ArrayIterator {
-							public function __toString(): string
-							{
-								$content = '';
 
-								foreach ($this as $item) {
-									$content .= $item;
+				if (!$this->manager->has($path)) {
+					throw new RuntimeException(sprintf(
+						'Could not find matching tag for "%s" at path "%s"',
+						$path_tag,
+						$path
+					));
+				}
+
+				$this->depth++;
+
+				$fragment = $this->dom->loadHTMLFragment(
+					(string) $this->manager->load(
+						$path,
+						[
+							'ctx'      => $context,
+							'children' => new class($children) extends ArrayIterator implements Stringable {
+								public function __toString(): string
+								{
+									return join('', iterator_to_array($this));
 								}
-
-								return $content;
 							}
-						}
-					] + $data
+						] + $data
+					),
+					[
+						'target_document' => $doc,
+						'disable_html_ns' => TRUE
+					]
 				);
 
-				$sub_doc->loadHTML($template->render(), static::NODE_FLAGS);
+				$this->depth--;
+
+				foreach ($fragment->ownerDocument->getElementsByTagName('script') as $script) {
+					$this->scripts[md5($script->textContent)] = $script;
+					$script->remove();
+				}
+
+				$sub_document->append(...$fragment->getHTMLChildren());
 			}
 
-			foreach ($sub_doc->childNodes as $sub_node) {
-				foreach ($prop as $attr_name => $attr_value) {
-					if (!is_string($attr_value)) {
-						if (is_array($attr_value) || is_bool($attr_value)) {
-							$attr_value = json_encode($attr_value);
+			foreach ($sub_document->childNodes as $sub_node) {
+				foreach ($attributes as $name => $value) {
+					if (!is_string($value)) {
+						if (is_array($value) || is_bool($value)) {
+							$value = json_encode($value);
 						} else {
-							$attr_value = (string) $attr_value;
+							$value = (string) $value;
 						}
 					}
 
 					if ($sub_node->hasAttributes()) {
-						foreach ($sub_node->attributes as $target_attr) {
-							if ($target_attr->name == $attr_name) {
-								$target_attr->value = $target_attr->value . ' ' . $attr_value;
+						foreach ($sub_node->attributes as $target_attribute) {
+							if ($target_attribute->name == $name) {
+								$target_attribute->value = $target_attribute->value . ' ' . $value;
 								continue 2;
 							}
 						}
 					}
 
-					$new_attr        = $sub_doc->createAttribute($attr_name);
-					$new_attr->value = $attr_value;
+					$new_attribute        = $doc->createAttribute($name);
+					$new_attribute->value = $value;
 
-					$sub_node->appendChild($new_attr);
+					$sub_node->appendChild($new_attribute);
 				}
 			}
 
-			$fragment = $sub_doc->createDocumentFragment();
-			$fragment->append(...$sub_doc->childNodes);
-
-			return $fragment;
+			return $sub_document;
 
 		} else {
 			$this->renderChildren($node, $doc, $extension);

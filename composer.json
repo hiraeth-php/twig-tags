@@ -20,7 +20,7 @@
 		"php": ">=8.2",
         "hiraeth/app": "^3.0",
         "hiraeth/twig": "^3.0",
-        "ivopetkov/html5-dom-document-php": "^2.0"
+        "masterminds/html5": "^2.9"
     },
 	"autoload": {
 		"classmap": ["src/"]

@@ -6,8 +6,7 @@ class Text extends \DOMText implements \Stringable
 {
 	static protected $inlineElements = [
 		'a','abbr','acronym','b','bdo','big','br','button','cite','code','dfn','em','i','img',
-		'input','kbd','label','map','object','q','samp','script','select','small','span','strong',
-		'sub','sup','textarea','time','tt','var'
+		'kbd','map','object','q','samp','small','span','strong', 'sub','sup','time','tt','var'
 	];
 
 	public function __toString(): string
@@ -15,7 +14,7 @@ class Text extends \DOMText implements \Stringable
 		return $this->textContent;
 	}
 
-	public function clean(): bool
+	public function trim(): bool
 	{
 		$next = $this->nextSibling;
 		$prev = $this->previousSibling;
@@ -53,7 +52,7 @@ class Text extends \DOMText implements \Stringable
 	}
 
 
-	public function isInline(): bool
+	protected function isInline(): bool
 	{
 		$next = $this->nextSibling;
 		$prev = $this->previousSibling;

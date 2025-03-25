@@ -6,12 +6,26 @@ class Fragment extends \DOMDocumentFragment implements \Stringable
 {
 	public function __toString(): string
 	{
-		$content = '';
+		return preg_replace('#^<html>|</html>$#', '', $this->ownerDocument->saveHTML($this));
+	}
 
-		foreach ($this->childNodes as $child) {
-			$content .= (string) $child;
-		}
 
-		return $content;
+	public function getHTMLChildren()
+	{
+		$test = function($node) use (&$test) {
+			if ($node->nodeName == 'html') {
+				return iterator_to_array($node->childNodes);
+			}
+
+			foreach ($node->childNodes as $child) {
+				if ($child instanceof Tag) {
+					return $test($child);
+				}
+			}
+
+			return [];
+		};
+
+		return $test($this->getRootNode());
 	}
 }

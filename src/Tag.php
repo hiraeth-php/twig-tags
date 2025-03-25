@@ -2,11 +2,16 @@
 
 namespace Hiraeth\Twig\Tags;
 
-use IvoPetkov\HTML5DOMElement;
-
 /**
  *
  */
-class Tag extends HTML5DOMElement {
-
+class Tag extends \DOMElement implements \Stringable
+{
+	/**
+	 *
+	 */
+	public function __toString(): string
+	{
+		return preg_replace('#^<html>|</html>$#', '', $this->ownerDocument->saveHTML($this));
+	}
 }
