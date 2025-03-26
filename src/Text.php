@@ -5,7 +5,7 @@ namespace Hiraeth\Twig\Tags;
 class Text extends \DOMText implements \Stringable
 {
 	static protected $inlineElements = [
-		'a','abbr','acronym','b','bdo','big','br','button','cite','code','dfn','em','i','img',
+		'a','abbr','acronym','b','bdo','big','br','button','cite','code','dfn','em','img',
 		'kbd','map','object','q','samp','small','span','strong', 'sub','sup','time','tt','var'
 	];
 

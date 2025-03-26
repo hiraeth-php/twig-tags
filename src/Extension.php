@@ -164,35 +164,21 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 		$this->renderNode($doc->documentElement, $doc, $extension);
 
-		if (!$this->depth) {
-			if (count($this->scripts)) {
-				ksort($this->scripts);
+if (!$this->depth) {
+	if (count($this->scripts)) {
+		ksort($this->scripts);
 
-				$content = sprintf('%s', join("\n", array_map(
-					fn($script) => $script->textContent,
-					$this->scripts
-				)));
+		$scripts = $doc->createElement('script');
+		$content = sprintf('%s', join("\n", array_map(
+			fn($script) => $script->textContent,
+			$this->scripts
+		)));
 
-				$hash = md5($content);
-				$file = sprintf('storage/public/hscripts/%s.js', $hash);
+		$scripts->append($content);
 
-				if (!$this->app->hasFile($file)) {
-					$handle = $this->app->getFile($file, TRUE)->openFile('w+');
-
-					$handle->fwrite($content);
-					$handle->fflush();
-				}
-
-				$scripts = $doc->createElement('script');
-				$source  = $doc->createAttribute('src');
-
-				$source->value = sprintf('/storage/hscripts/%s.js', $hash);
-
-				$scripts->appendChild($source);
-
-				$doc->getElementsByTagName('html')[0]->prepend($scripts);
-			}
-		}
+		$doc->getElementsByTagName('html')[0]->prepend($scripts);
+	}
+}
 
 		return $this->dom->saveHTML($doc);
 	}
