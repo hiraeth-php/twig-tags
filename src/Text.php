@@ -19,7 +19,9 @@ class Text extends \DOMText implements \Stringable
 		$next = $this->nextSibling;
 		$prev = $this->previousSibling;
 
-		if (in_array($this->parentNode->nodeName, ['pre', 'code'])) {
+		if (
+			in_array($this->parentNode->nodeName, ['pre', 'code', 'textarea'])
+		) {
 			return FALSE;
 		}
 
