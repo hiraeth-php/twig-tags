@@ -162,23 +162,27 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$doc->registerNodeClass(DOMElement::class, Tag::class);
 		$doc->registerNodeClass(DOMText::class, Text::class);
 
+		if (!$doc->documentElement) {
+			return $content;
+		}
+
 		$this->renderNode($doc->documentElement, $doc, $extension);
 
-if (!$this->depth) {
-	if (count($this->scripts)) {
-		ksort($this->scripts);
+		if (!$this->depth) {
+			if (count($this->scripts)) {
+				ksort($this->scripts);
 
-		$scripts = $doc->createElement('script');
-		$content = sprintf('%s', join("\n", array_map(
-			fn($script) => $script->textContent,
-			$this->scripts
-		)));
+				$scripts = $doc->createElement('script');
+				$content = sprintf('%s', join("\n", array_map(
+					fn($script) => $script->textContent,
+					$this->scripts
+				)));
 
-		$scripts->append($content);
+				$scripts->append($content);
 
-		$doc->getElementsByTagName('html')[0]->prepend($scripts);
-	}
-}
+				$doc->getElementsByTagName('html')[0]->prepend($scripts);
+			}
+		}
 
 		return $this->dom->saveHTML($doc);
 	}
