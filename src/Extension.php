@@ -301,8 +301,10 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				$this->depth--;
 
 				foreach ($fragment->ownerDocument->getElementsByTagName('script') as $script) {
-					$this->scripts[md5($script->textContent)] = $script;
-					$script->remove();
+					if (!$script->getAttribute('src')) {
+						$this->scripts[md5($script->textContent)] = $script;
+						$script->remove();
+					}
 				}
 
 				$sub_document->append(...$fragment->getHTMLChildren());
