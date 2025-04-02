@@ -54,10 +54,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	 */
 	protected $parser;
 
-	/**
-	 * @var array<Tag>
-	 */
-	protected $scripts = [];
 
 	/**
 	 *
@@ -153,7 +149,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 		if (!$this->depth) {
 			$this->context = [];
-			$this->scripts = [];
 		}
 
 		$doc = $this->dom->loadHTML($content);
@@ -169,18 +164,35 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$this->renderNode($doc->documentElement, $doc, $extension);
 
 		if (!$this->depth) {
-			if (count($this->scripts)) {
-				ksort($this->scripts);
+			$hashes = [];
 
-				$scripts = $doc->createElement('script');
-				$content = sprintf('%s', join("\n", array_map(
-					fn($script) => $script->textContent,
-					$this->scripts
-				)));
+			foreach (['scripts' => 'script', 'styles' => 'style'] as $type => $name) {
+				foreach ($doc->getElementsByTagName($name) as $node) {
+					if ($node->getAttribute('src')) {
+						continue;
+					}
 
-				$scripts->append($content);
+					if ($node->parentElement->nodeName == 'head') {
+						continue;
+					}
 
-				$doc->getElementsByTagName('html')[0]->prepend($scripts);
+					$hash = md5($node->textContent);
+
+					if (!isset($hashes[$hash])) {
+						$attr        = $doc->createAttribute('data-hash');
+						$new_node    = $doc->createElement($node->nodeName);
+						$attr->value = $hash;
+
+						$new_node->appendChild($attr);
+						$new_node->append($node->textContent);
+
+						$doc->getElementsByTagName('html')[0]->prepend($new_node);
+
+						$node->remove();
+					}
+
+					$hashes[$hash] = TRUE;
+				}
 			}
 		}
 
@@ -300,17 +312,14 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 				$this->depth--;
 
-				foreach ($fragment->ownerDocument->getElementsByTagName('script') as $script) {
-					if (!$script->getAttribute('src')) {
-						$this->scripts[md5($script->textContent)] = $script;
-						$script->remove();
-					}
-				}
-
 				$sub_document->append(...$fragment->getHTMLChildren());
 			}
 
 			foreach ($sub_document->childNodes as $sub_node) {
+				if (in_array($sub_node->nodeName, ['script', 'style'])) {
+					continue;
+				}
+
 				foreach ($attributes as $name => $value) {
 					if (!is_string($value)) {
 						if (is_array($value) || is_bool($value)) {
