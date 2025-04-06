@@ -117,12 +117,25 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				]
 			),
 			new TwigFunction(
-				'resolve',
+				'default',
 				function(array &$context, array $values) {
 					$context = array_merge($context, $values);
 				},
 				[
 				 	'needs_context' => TRUE
+				]
+			),
+
+			New TwigFunction(
+				'styling',
+				function(array &$context, string ...$class) {
+					$context['styling'] = implode(' ', array_filter($class, function($c) {
+						return $c != '';
+					}));
+				},
+				[
+					'needs_context' => TRUE,
+					'is_variadic' => TRUE,
 				]
 			)
 		];
