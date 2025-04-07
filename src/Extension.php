@@ -179,7 +179,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		if (!$this->depth) {
 			$hashes = [];
 
-			foreach (['scripts' => 'script', 'styles' => 'style'] as $type => $name) {
+			foreach (['title', 'script', 'style'] as $name) {
 				foreach ($doc->getElementsByTagName($name) as $node) {
 					if ($node->getAttribute('src')) {
 						continue;
@@ -189,22 +189,40 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 						continue;
 					}
 
-					$hash = md5($node->textContent);
+					/**
+					 * @var Tag
+					 */
+					$root = count($doc->getElementsByTagName('head'))
+						? $doc->getElementsByTagName('head')[0]
+						: $doc->getElementsByTagName('html')[0]
+					;
 
-					if (!isset($hashes[$hash])) {
-						$attr        = $doc->createAttribute('data-hash');
-						$new_node    = $doc->createElement($node->nodeName);
-						$attr->value = $hash;
-
-						$new_node->appendChild($attr);
-						$new_node->append($node->textContent);
-
-						$doc->getElementsByTagName('html')[0]->prepend($new_node);
-
+					if ($name == 'title') {
+						$new_node = $doc->createElement($node->nodeName);
+						$new_node->prepend($node->textContent);
+						$root->prepend($new_node);
 						$node->remove();
-					}
 
-					$hashes[$hash] = TRUE;
+					} else {
+						$hash = md5($node->textContent);
+
+						if (!isset($hashes[$hash])) {
+							$attr        = $doc->createAttribute('data-hash');
+							$new_node    = $doc->createElement($node->nodeName);
+							$attr->value = $hash;
+
+							$new_node->appendChild($attr);
+							$new_node->append($node->textContent);
+
+							if ($root->nodeName == 'html') {
+								$root->prepend($new_node);
+							} else {
+								$root->append($new_node);
+							}
+						}
+
+						$hashes[$hash] = TRUE;
+					}
 				}
 			}
 		}
