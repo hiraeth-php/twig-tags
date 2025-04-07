@@ -201,7 +201,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 						$new_node = $doc->createElement($node->nodeName);
 						$new_node->prepend($node->textContent);
 						$root->prepend($new_node);
-						$node->remove();
 
 					} else {
 						$hash = md5($node->textContent);
@@ -223,6 +222,8 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 						$hashes[$hash] = TRUE;
 					}
+
+					$node->remove();
 				}
 			}
 		}
