@@ -24,7 +24,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	protected $app;
 
 	/**
-	 * @var array<string, mixed>
+	 * @var array<array<string, mixed>>
 	 */
 	protected $context = [];
 
@@ -101,7 +101,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 					}
 
 					if ($priors) {
-						$missing = array_diff($priors, array_keys($context['ctx']));
+						$missing = array_diff($priors, array_keys($context['context']));
 
 						if (count($missing)) {
 							throw new RuntimeException(sprintf(
@@ -128,7 +128,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 			New TwigFunction(
 				'styling',
-				function(array &$context, string ...$class) {
+				function(array &$context, ?string ...$class) {
 					$context['styling'] = implode(' ', array_filter($class, function($c) {
 						return $c != '';
 					}));
@@ -141,7 +141,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		];
 	}
 
-
 	/**
 	 *
 	 */
@@ -153,7 +152,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	/**
 	 *
 	 */
-	public function render(string $content, string $extension): string
+	public function render(string $content, string $extension, array $context = []): string
 	{
 
 		if (!in_array($extension, ['html', 'html'])) {
@@ -161,7 +160,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		}
 
 		if (!$this->depth) {
-			$this->context = [];
+			$this->context = [$context];
 		}
 
 		$doc = $this->dom->loadHTML($content);
@@ -303,7 +302,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				}
 			}
 
-			$this->context = $context = $data + $this->context;
+			array_push($this->context, $data);
 
 			if ($path_tag == '/') {
 				$children = $this->renderChildren($node, $doc, $extension, $data);
@@ -327,7 +326,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 					(string) $this->manager->load(
 						$path,
 						[
-							'ctx'      => $context,
+							'context'  => array_replace([], ...$this->context),
 							'children' => new class($children) extends ArrayIterator implements Stringable {
 								public function __toString(): string
 								{
@@ -346,6 +345,8 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 				$sub_document->append(...$fragment->getHTMLChildren());
 			}
+
+			array_pop($this->context);
 
 			foreach ($sub_document->childNodes as $sub_node) {
 				if (in_array($sub_node->nodeName, ['script', 'style'])) {
