@@ -86,6 +86,16 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	{
 		return [
 			new TwigFunction(
+				'default',
+				function(array &$context, array $values) {
+					$context = array_merge($context, $values);
+				},
+				[
+				 	'needs_context' => TRUE
+				]
+			),
+
+			new TwigFunction(
 				'require',
 				function(array $context, array $attributes, array $priors = []) {
 					if ($attributes) {
@@ -116,22 +126,23 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				 	'needs_context' => TRUE
 				]
 			),
-			new TwigFunction(
-				'default',
-				function(array &$context, array $values) {
-					$context = array_merge($context, $values);
-				},
-				[
-				 	'needs_context' => TRUE
-				]
-			),
 
-			New TwigFunction(
+			new TwigFunction(
 				'styling',
-				function(array &$context, ?string ...$class) {
-					$context['styling'] = implode(' ', array_filter($class, function($c) {
-						return $c != '';
-					}));
+				function(array &$context, string|array|null ...$classes) {
+					return $context['styling'] = array_reduce(
+						$classes,
+						function($n, $v) {
+							if (is_array($v)) {
+								$v = trim(implode(' ', array_keys(array_filter($v))));
+							}
+
+							return !empty($v)
+								? $n .= ' ' . $v
+								: $n
+							;
+						}
+					);
 				},
 				[
 					'needs_context' => TRUE,
@@ -298,7 +309,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 				if (str_starts_with($attr->value, (string) $this->parser::PREFIX)) {
 					$$type[$name] = $this->parser->getValue($attr->value);
 				} else {
-					$$type[$name] = $attr->value ?: 1;
+					$$type[$name] = $attr->value != '' ? $attr->value : 1;
 				}
 			}
 
