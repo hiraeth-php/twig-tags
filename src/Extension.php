@@ -63,7 +63,8 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$this->app    = $app;
 		$this->parser = $parser;
 		$this->dom    = new HTML5([
-			'xmlNamespaces' => TRUE
+			'xmlNamespaces'   => TRUE,
+			'disable_html_ns' => TRUE
 		]);
 	}
 
