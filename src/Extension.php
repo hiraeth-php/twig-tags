@@ -334,6 +334,9 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 				$this->depth++;
 
+				/**
+				 * @var Fragment
+				 */
 				$fragment = $this->dom->loadHTMLFragment(
 					(string) $this->manager->load(
 						$path,
