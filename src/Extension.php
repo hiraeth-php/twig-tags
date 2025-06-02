@@ -237,6 +237,14 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 					$node->remove();
 				}
 			}
+
+			if (strpos(substr($content, 0, 32), '<html') === FALSE) {
+				return preg_replace(
+					'#^<!doctype.*html>\s*<html>|</html>$#i',
+					'',
+					$this->dom->saveHTML($doc)
+				);
+			}
 		}
 
 		return $this->dom->saveHTML($doc);
