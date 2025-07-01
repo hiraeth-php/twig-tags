@@ -38,6 +38,10 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 	 */
 	protected $dom;
 
+	/**
+	 * @var array<string>
+	 */
+	protected $hashes = [];
 
 	/**
 	 * @var Manager
@@ -188,8 +192,6 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$this->renderNode($doc->documentElement, $doc, $extension);
 
 		if (!$this->depth) {
-			$hashes = [];
-
 			foreach (['title', 'script', 'style'] as $name) {
 				foreach ($doc->getElementsByTagName($name) as $node) {
 					if ($node->getAttribute('src')) {
@@ -216,7 +218,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 					} else {
 						$hash = md5($node->textContent);
 
-						if (!isset($hashes[$hash])) {
+						if (!isset($this->hashes[$hash])) {
 							$attr        = $doc->createAttribute('data-hash');
 							$new_node    = $doc->createElement($node->nodeName);
 							$attr->value = $hash;
@@ -231,7 +233,7 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 							}
 						}
 
-						$hashes[$hash] = TRUE;
+						$this->hashes[$hash] = TRUE;
 					}
 
 					$node->remove();
