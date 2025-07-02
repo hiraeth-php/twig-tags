@@ -302,25 +302,34 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$this->nodeName = $node->nodeName;
 
 		if (str_contains($node->nodeName, ':')) {
-			$context       = [];
 			$attributes    = [];
 			$sub_document  = $doc->createElement('html');
 			$path_tag      = preg_replace('/^[a-z]+[:]+|[:]+/', '/', $node->nodeName);
 			$path          = '@tags' . $path_tag . '.' . $extension;
 
 			foreach ($node->attributes as $attr) {
-				if (str_ends_with($attr->name, ':')) {
-					$type = 'attributes';
-					$name = substr($attr->name, 0, -1);
-				} else {
-					$type = 'data';
-					$name = $attr->name;
-				}
+				if (str_ends_with($attr->name, '...')) {
+					$name    = substr($attr->name, 0, -3);
+					$context = end($this->context);
 
-				if (str_starts_with($attr->value, (string) $this->parser::PREFIX)) {
-					$$type[$name] = $this->parser->getValue($attr->value);
+					if (array_key_exists($name, $context)) {
+						$data[$name] = $context[$name];
+					}
+
 				} else {
-					$$type[$name] = $attr->value != '' ? $attr->value : 1;
+					if (str_ends_with($attr->name, ':')) {
+						$type = 'attributes';
+						$name = substr($attr->name, 0, -1);
+					} else {
+						$type = 'data';
+						$name = $attr->name;
+					}
+
+					if (str_starts_with($attr->value, (string) $this->parser::PREFIX)) {
+						$$type[$name] = $this->parser->getValue($attr->value);
+					} else {
+						$$type[$name] = $attr->value != '' ? $attr->value : 1;
+					}
 				}
 			}
 
