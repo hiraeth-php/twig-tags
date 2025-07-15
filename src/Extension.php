@@ -192,7 +192,10 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 		$this->renderNode($doc->documentElement, $doc, $extension);
 
 		if (!$this->depth) {
+			$title_node = null;
+
 			foreach (['title', 'script', 'style'] as $name) {
+
 				foreach ($doc->getElementsByTagName($name) as $node) {
 					if ($node->getAttribute('src')) {
 						continue;
@@ -211,9 +214,8 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 					;
 
 					if ($name == 'title') {
-						$new_node = $doc->createElement($node->nodeName);
-						$new_node->prepend($node->textContent);
-						$root->prepend($new_node);
+						$title_node = $doc->createElement($node->nodeName);
+						$title_node->prepend($node->textContent);
 
 					} else {
 						$hash = md5($node->textContent);
@@ -238,6 +240,10 @@ class Extension extends AbstractExtension implements Renderer, GlobalsInterface
 
 					$node->remove();
 				}
+			}
+
+			if (!empty($title_node)) {
+				$root->prepend($title_node);
 			}
 
 			if (strpos(substr($content, 0, 32), '<html') === FALSE) {
